@@ -1,0 +1,51 @@
+# Dependências
+node_modules/
+.pnpm-store/
+
+# Builds
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Ambiente e segredos (NUNCA commitar)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+*.pem
+*.key
+
+# Auth state do Baileys (sessão WhatsApp — dado sensível)
+auth_info_baileys/
+**/baileys-auth/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+pnpm-debug.log*
+
+# Docker volumes locais
+.docker-data/
+postgres-data/
+redis-data/
+
+# Editor / SO
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+Thumbs.db
+
+# Prisma
+# (schema.prisma e migrations SÃO commitados; apenas artefatos locais não)
+prisma/migrations/dev.db*
+generated/
+**/generated/
+
+# Testes
+coverage/

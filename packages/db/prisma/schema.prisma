@@ -1,0 +1,187 @@
+// ════════════════════════════════════════════════════════════════
+//  CRM Agent WhatsApp — Prisma Schema
+//  Contrato de dados compartilhado entre:
+//    • services/wa-daemon   → grava contatos, conversas, mensagens
+//    • services/ai-worker   → grava classificações de lead + respostas
+//    • apps/crm-panel       → lê tudo, move leads no funil
+// ════════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────────────────────────────────────────
+//  ENUMS — vocabulário de domínio (linguagem ubíqua do sistema)
+// ───────────────────────────────────────────────────────────────
+
+/// Direção de uma mensagem em relação ao número conectado.
+enum MessageDirection {
+  INBOUND // mensagem recebida do contato
+  OUTBOUND // mensagem enviada (pela IA ou por humano no painel)
+}
+
+/// Etapa do funil de vendas no CRM.
+/// "NOVOS" → lead recém-chegou; "EM_CONVERSA" → interação em andamento;
+/// "QUALIFICADOS" → lead confirmou interesse / está pronto para ação.
+enum FunnelStage {
+  NOVOS
+  EM_CONVERSA
+  QUALIFICADOS
+}
+
+/// Temperatura do lead: quão quente o interesse está.
+/// Atribuída pela IA (Etapa 2) com base no conteúdo da conversa.
+enum LeadTemperature {
+  QUENTE // muito interessado
+  MEDIO // interesse médio
+  FRIO // apenas curioso / explorando
+}
+
+/// Provedor de IA selecionado na aba Configurações do painel.
+enum AIProvider {
+  OPENAI
+  ANTHROPIC
+  OLLAMA
+}
+
+// ───────────────────────────────────────────────────────────────
+//  CONTATO E CONVERSA  (gravados pelo wa-daemon — Etapa 1)
+// ───────────────────────────────────────────────────────────────
+
+/// Pessoa que enviou ou recebeu mensagens pelo WhatsApp.
+/// `jid` é o identificador do WhatsApp (e.g. 5511999999999@s.whatsapp.net).
+/// `lid` é o novo Local Identifier do WA multi-device — mantido para
+/// compatibilidade futura com Baileys v7 (LID-aware).
+model Contact {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String?
+  jid       String?  @unique
+  lid       String?  @unique
+  avatarUrl String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  conversations Conversation[]
+  leads         Lead[]
+
+  @@map("contacts")
+}
+
+/// Uma conversa contínua com um contato. Pode haver várias se o contato
+/// retorna após um longo período, mas tipicamente uma por contato.
+model Conversation {
+  id            String   @id @default(cuid())
+  contactId     String   @map("contact_id")
+  status        String   @default("active")
+  lastMessageAt DateTime @default(now()) @map("last_message_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  contact  Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([contactId])
+  @@map("conversations")
+}
+
+/// Uma mensagem individual trocada no WhatsApp.
+model Message {
+  id             String           @id @default(cuid())
+  conversationId String           @map("conversation_id")
+  direction      MessageDirection
+  body           String           @db.Text
+  waMessageId    String?          @unique @map("wa_message_id")
+  aiGenerated    Boolean          @default(false) @map("ai_generated")
+  timestamp      DateTime         @default(now())
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, timestamp])
+  @@index([direction])
+  @@map("messages")
+}
+
+// ───────────────────────────────────────────────────────────────
+//  LEAD E CLASSIFICAÇÃO  (lead pelo painel; classificação pela IA)
+// ───────────────────────────────────────────────────────────────
+
+/// Um contato promovido a lead no funil de CRM.
+/// 1 Lead por contato (1:1) — facilita mover entre etapas do funil.
+model Lead {
+  id          String      @id @default(cuid())
+  contactId   String      @unique @map("contact_id")
+  funnelStage FunnelStage @default(NOVOS) @map("funnel_stage")
+  assignedTo  String?     @map("assigned_to")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  contact         Contact              @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  classifications LeadClassification[]
+
+  @@index([funnelStage])
+  @@map("leads")
+}
+
+/// Classificação gerada pela IA (Etapa 2) para um lead.
+/// Várias classificações ao longo do tempo = histórico de evolução.
+model LeadClassification {
+  id               String          @id @default(cuid())
+  leadId           String          @map("lead_id")
+  temperature      LeadTemperature
+  interestCategory String          @map("interest_category") @db.Text
+  summary          String          @db.Text
+  confidence       Float           @default(0)
+  nextAction       String?         @map("next_action") @db.Text
+  classifiedAt     DateTime        @default(now()) @map("classified_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, classifiedAt])
+  @@map("lead_classifications")
+}
+
+// ───────────────────────────────────────────────────────────────
+//  CONFIGURAÇÃO DA IA  (aba Configurações do painel — Etapa 2/3)
+//  API key é criptografada em repouso (AI_CONFIG_ENCRYPTION_KEY).
+// ───────────────────────────────────────────────────────────────
+
+/// Configuração do provedor de IA. Singleton (uma linha ativa).
+/// `apiKey` armazena o valor CRIPTOGRAFADO, nunca em texto puro.
+model AIProviderConfig {
+  id        Int        @id @default(1)
+  provider  AIProvider @default(OPENAI)
+  apiKey    String     @map("api_key") @db.Text // criptografado (AES-256-GCM)
+  model     String     @default("gpt-4o-mini")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@map("ai_provider_config")
+}
+
+// ───────────────────────────────────────────────────────────────
+//  FILA DE ENVIO  (rate-limit + delays humanos anti-banimento)
+// ───────────────────────────────────────────────────────────────
+
+/// Mensagem de saída aguardando envio pelo wa-daemon.
+/// Permite enfileirar respostas da IA e do humano, com delay e
+/// controle de taxa para evitar bloqueio do número (Etapa 1).
+model OutboundMessage {
+  id           String    @id @default(cuid())
+  contactId    String    @map("contact_id")
+  body         String    @db.Text
+  source       String    @default("ai") // "ai" | "human"
+  status       String    @default("pending") // pending | sent | failed
+  sendAt       DateTime  @default(now()) @map("send_at")
+  sentAt       DateTime? @map("sent_at")
+  errorMessage String?   @map("error_message") @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([status, sendAt])
+  @@map("outbound_messages")
+}

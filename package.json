@@ -1,0 +1,32 @@
+{
+  "name": "crm-agent-whatsapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CRM de captação de leads pelo WhatsApp com IA classificadora (Etapa 0 — Fundação)",
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f",
+    "db:migrate": "pnpm --filter @crm/db prisma:migrate",
+    "db:generate": "pnpm --filter @crm/db prisma:generate",
+    "db:studio": "pnpm --filter @crm/db prisma:studio",
+    "build": "pnpm -r --filter=./packages/* --filter=./services/* --filter=./apps/* run build",
+    "dev:daemon": "pnpm --filter @crm/wa-daemon dev",
+    "dev:worker": "pnpm --filter @crm/ai-worker dev",
+    "dev:panel": "pnpm --filter @crm/crm-panel dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "prisma"
+    ]
+  }
+}

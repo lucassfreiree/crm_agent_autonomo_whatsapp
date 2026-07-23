@@ -1,0 +1,18 @@
+{
+  "name": "@crm/crm-panel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Painel CRM (Next.js): funil Kanban, detalhe do lead com linha do tempo da conversa, aba Configurações (provedor de IA + API key). Implementado na Etapa 3.",
+  "scripts": {
+    "dev": "echo 'Etapa 3 (crm-panel) ainda não implementada — execute a próxima etapa do plano' && exit 1",
+    "build": "echo 'Etapa 3 pendente' && exit 0"
+  },
+  "dependencies": {
+    "@crm/db": "workspace:*",
+    "@crm/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

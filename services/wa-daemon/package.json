@@ -1,0 +1,18 @@
+{
+  "name": "@crm/wa-daemon",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Daemon sempre ligado: conexão WhatsApp via Baileys (QR/pairing code), persiste sessão, grava mensagens no Postgres, publica eventos Redis. Implementado na Etapa 1.",
+  "scripts": {
+    "dev": "echo 'Etapa 1 (wa-daemon) ainda não implementada — execute a próxima etapa do plano' && exit 1",
+    "build": "echo 'Etapa 1 pendente' && exit 0"
+  },
+  "dependencies": {
+    "@crm/db": "workspace:*",
+    "@crm/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
