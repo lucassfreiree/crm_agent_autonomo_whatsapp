@@ -28,7 +28,8 @@
       "@prisma/engines",
       "prisma",
       "esbuild",
-      "protobufjs"
+      "protobufjs",
+      "msgpackr-extract"
     ]
   }
 }

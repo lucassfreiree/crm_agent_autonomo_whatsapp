@@ -4,6 +4,13 @@
 //  crm-panel. Mantê-los aqui garante que os 3 serviços concordem.
 // ════════════════════════════════════════════════════════════════
 
+// Crypto helper (AES-256-GCM) para cifrar/decifrar a API key da IA.
+export {
+  encryptApiKey,
+  decryptApiKey,
+  hasEncryptionKey,
+} from "./crypto.js";
+
 /**
  * Evento publicado no Redis quando uma nova mensagem chega do WhatsApp.
  * Consumido pelo ai-worker (Etapa 2) para classificar o lead.

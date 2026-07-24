@@ -3,16 +3,27 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Worker: consome eventos de nova mensagem, classifica o lead via IA (Structured Outputs) e gera resposta natural. Lê provedor/modelo/API key da tabela AIProviderConfig. Implementado na Etapa 2.",
+  "description": "Worker: consome novas mensagens, classifica o lead via IA (Structured Outputs) e gera resposta humanizada em pt-BR. Lê provedor/modelo/API key da tabela AIProviderConfig.",
   "scripts": {
-    "dev": "echo 'Etapa 2 (ai-worker) ainda não implementada — execute a próxima etapa do plano' && exit 1",
-    "build": "echo 'Etapa 2 pendente' && exit 0"
+    "dev": "tsx watch src/index.ts",
+    "start": "node --import tsx/esm src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@crm/db": "workspace:*",
-    "@crm/shared-types": "workspace:*"
+    "@crm/shared-types": "workspace:*",
+    "bullmq": "^5.34.5",
+    "dotenv": "^16.4.7",
+    "ioredis": "^5.4.2",
+    "openai": "^4.77.0",
+    "pino": "^9.6.0",
+    "pino-pretty": "^11.3.0"
   },
   "devDependencies": {
+    "@types/node": "^20.17.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
 }

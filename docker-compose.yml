@@ -74,6 +74,27 @@ services:
       retries: 3
       start_period: 20s
 
+  # ── Worker de IA (classifica leads + gera respostas) ────────────
+  # Consome o canal crm:new-message publicado pelo wa-daemon.
+  ai-worker:
+    build:
+      context: .
+      dockerfile: services/ai-worker/Dockerfile
+    container_name: crm-ai-worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-crm_user}:${POSTGRES_PASSWORD:-crm_pass}@postgres:5432/${POSTGRES_DB:-crm_db}?schema=public"
+      REDIS_URL: "redis://redis:6379"
+      # Chave de criptografia da API key (lê do .env do host).
+      AI_CONFIG_ENCRYPTION_KEY: "${AI_CONFIG_ENCRYPTION_KEY}"
+      AI_CLASSIFY_MIN_MESSAGES: "${AI_CLASSIFY_MIN_MESSAGES:-10}"
+
 volumes:
   postgres-data:
     name: crm-postgres-data
